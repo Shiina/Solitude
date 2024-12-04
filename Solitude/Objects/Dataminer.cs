@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Threading;
 using CommunityToolkit.HighPerformance;
 using CUE4Parse.FileProvider;
@@ -14,6 +15,7 @@ using CUE4Parse.UE4.Versions;
 using CUE4Parse.UE4.VirtualFileSystem;
 using CUE4Parse_Conversion.Textures;
 using EpicManifestParser.Api;
+using Flurl;
 using K4os.Compression.LZ4.Streams;
 using RestSharp;
 using SkiaSharp;
@@ -38,7 +40,7 @@ public class Dataminer
     public Dataminer(string mappingsPath, string backupPath)
     {
         _backup = backupPath;
-        _provider = new("FortniteGame", true, new VersionContainer(EGame.GAME_UE5_5));
+        _provider = new("FortniteGame", true, new VersionContainer(EGame.GAME_UE5_6));
         _provider.MappingsContainer = new FileUsmapTypeMappingsProvider(mappingsPath);
     }
 
@@ -55,7 +57,9 @@ public class Dataminer
         await _chunks.DownloadManifestAsync(manifestInfo);
 
         _chunks.LoadFileForProvider("FortniteGame/Content/Paks/global.utoc", ref _provider);
-        _chunks.LoadFileForProvider("FortniteGame/Content/Paks/pakchunk10-WindowsClient.utoc", ref _provider); // hahahahahahahahahahahahahaha
+        _chunks.LoadFileForProvider("FortniteGame/Content/Paks/pakchunk10-WindowsClient.utoc", ref _provider);
+        _chunks.LoadFileForProvider("FortniteGame/Content/Paks/pakchunk30-WindowsClient.utoc", ref _provider); // added v32.10
+        _chunks.LoadFileForProvider("FortniteGame/Content/Paks/pakchunk50-WindowsClient.utoc", ref _provider); // added v32.10
     }
 
     public async Task LoadFilesAsync()
@@ -108,13 +112,47 @@ public class Dataminer
             }
         }
 
+        // mine
+        //var sb = new StringBuilder();
+
+        //var testFilePath = Path.Combine(AppContext.BaseDirectory, "Files", "do_not_delete.txt");
+        //var existingLines = new HashSet<string>(File.ReadLines(testFilePath));
+
         foreach (var (key, value) in _provider.Files)
         {
+            string providerOldFiles = key;
+            string providerOldFiles1 = providerOldFiles.Substring(providerOldFiles.LastIndexOf('/') + 1);
+            string providerOldFiles2 = Path.GetFileNameWithoutExtension(providerOldFiles1); // Removes the file extension
+
+            //sb.AppendLine(providerOldFiles2); // Accumulate strings in memory
+
+            //File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "Files", "Backups", "last_update.txt"), providerOldFiles2 + Environment.NewLine);
+
+            //if(providerOldFiles2.Contains("darkvogue"))
+            //{
+            //    Console.WriteLine(providerOldFiles2);
+            //}
+
+            //Console.WriteLine("KEY: " + key);
+            //Console.WriteLine("VALUE: " + value.ToString());
+
+            //string onlyNameTest = value.ToString();
+            //string onlyNameTest1 = onlyNameTest.Substring(onlyNameTest.LastIndexOf('/') + 1);
+            //string onlyNameWithoutExtension = Path.GetFileNameWithoutExtension(onlyNameTest1); // Removes the file extension
+
+            //Console.WriteLine(onlyNameWithoutExtension);
+
             if (value is not VfsEntry entry || paths.Contains(key) || entry.Path.EndsWith(".uexp") ||
-                entry.Path.EndsWith(".ubulk") || entry.Path.EndsWith(".uptnl")) continue;
+                entry.Path.EndsWith(".ubulk") || entry.Path.EndsWith(".uptnl") || entry.Path.StartsWith("FortniteGame/Plugins/GameFeatures/SaveTheWorld") ||
+                entry.Path.Contains("-HID-") || entry.Path.Contains("/Content/UI/Foundation/Textures/Icons/Weapons/")) continue;
+
+            //if (existingLines.Contains(providerOldFiles2)) continue;
 
             _newFiles.Add(entry);
         }
+
+        //mine
+        //File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "Files", "Backups", "last_update.txt"), sb.ToString());
 
         sw.Stop();
 
@@ -133,7 +171,8 @@ public class Dataminer
 
         var sw = Stopwatch.StartNew();
 
-        var newTextures = _newFiles.Where(x => x.Path.Contains("FortniteGame/Content/UI/Foundation/Textures"));
+        //var newTextures = _newFiles.Where(x => x.Path.Contains("FortniteGame/Content/UI/Foundation/Textures") || x.Path.Contains("FortniteGame/Plugins/GameFeatures/OfferCatalog/Content/Textures/BattleRoyale"));
+        var newTextures = _newFiles.Where(x => x.Path.Contains("FortniteGame/Content/UI/Foundation/Textures") || x.Path.Contains("FortniteGame/Plugins/GameFeatures/OfferCatalog/Content/Textures/BattleRoyale") || x.Path.Contains("FortniteGame/Plugins/GameFeatures/"));
         var newBundles = newTextures.Where(x => x.Name.StartsWith("T-AthenaBundle") || x.Name.StartsWith("T_AthenaBundle"));
         var newOutfits = newTextures.Where(x => x.Name.StartsWith("T-AthenaSoldier") || x.Name.StartsWith("T_AthenaSoldier"));
 
@@ -151,8 +190,27 @@ public class Dataminer
 
         RunCosmetics();
 
+        //foreach (var texturePath in newTextures)
+        //    _provider.SaveTextureToDisk(texturePath.PathWithoutExtension, DirectoryManager.ExportsDir);
+
         foreach (var texturePath in newTextures)
-            _provider.SaveTextureToDisk(texturePath.PathWithoutExtension, DirectoryManager.ExportsDir);
+        {
+            if (texturePath.Name.Contains("_LOD") || texturePath.Name.Contains("_RGB") || texturePath.Name.Contains("_BC") || texturePath.Name.Contains("_Pattern") || texturePath.Path.Contains("Materials") || texturePath.Name.Contains("A_S") || texturePath.Name.Contains("A_E"))
+            {
+                continue;
+            }
+            else if (texturePath.Name.Contains("_LOD") || texturePath.Name.Contains("_N") || texturePath.Name.Contains("_RGB") || texturePath.Name.Contains("_BC") || texturePath.Name.Contains("_Pattern") || texturePath.Name.Contains("_S") || texturePath.Name.Contains("_Pattern") || texturePath.Name.Contains("_B") || texturePath.Name.Contains("_A") || texturePath.Name.Contains("_Mask") || texturePath.Name.Contains("rgb") || texturePath.Name.Contains("_M") || texturePath.Name.Contains("Mask") || texturePath.Name.Contains("FX") || texturePath.Name.Contains("_M") || texturePath.Name.Contains("_E"))
+            {
+                if (texturePath.Path.Contains("Materials") || texturePath.Path.Contains("Textures"))
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                _provider.SaveTextureToDisk(texturePath.PathWithoutExtension, DirectoryManager.ExportsDir);
+            }
+        }
 
         await FinishOff();
     }

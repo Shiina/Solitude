@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Solitude", "Solitude\Solitude.csproj", "{819A19F1-576C-43B8-A70D-B44798413BBE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Solitude", "Solitude\Solitude.csproj", "{819A19F1-576C-43B8-A70D-B44798413BBE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CUE4Parse", "CUE4Parse\CUE4Parse\CUE4Parse.csproj", "{1A53408D-98BB-4FD9-9959-B19280817DA6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CUE4Parse", "..\..\Fortnite Projects\CUE4Parse\CUE4Parse\CUE4Parse.csproj", "{4F58B67C-178E-4A0D-8C17-260A2B3CF1E1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CUE4Parse-Conversion", "CUE4Parse\CUE4Parse-Conversion\CUE4Parse-Conversion.csproj", "{2209F1F7-635B-4100-B168-0C514E41DF0A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CUE4Parse-Conversion", "..\..\Fortnite Projects\CUE4Parse\CUE4Parse-Conversion\CUE4Parse-Conversion.csproj", "{38655273-BCCC-4A16-9262-E56684EC931E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,14 +19,14 @@ Global
 		{819A19F1-576C-43B8-A70D-B44798413BBE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{819A19F1-576C-43B8-A70D-B44798413BBE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{819A19F1-576C-43B8-A70D-B44798413BBE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1A53408D-98BB-4FD9-9959-B19280817DA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1A53408D-98BB-4FD9-9959-B19280817DA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1A53408D-98BB-4FD9-9959-B19280817DA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1A53408D-98BB-4FD9-9959-B19280817DA6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2209F1F7-635B-4100-B168-0C514E41DF0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2209F1F7-635B-4100-B168-0C514E41DF0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2209F1F7-635B-4100-B168-0C514E41DF0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2209F1F7-635B-4100-B168-0C514E41DF0A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F58B67C-178E-4A0D-8C17-260A2B3CF1E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F58B67C-178E-4A0D-8C17-260A2B3CF1E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F58B67C-178E-4A0D-8C17-260A2B3CF1E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F58B67C-178E-4A0D-8C17-260A2B3CF1E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{38655273-BCCC-4A16-9262-E56684EC931E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38655273-BCCC-4A16-9262-E56684EC931E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38655273-BCCC-4A16-9262-E56684EC931E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38655273-BCCC-4A16-9262-E56684EC931E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
