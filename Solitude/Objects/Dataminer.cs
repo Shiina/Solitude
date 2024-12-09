@@ -3,12 +3,14 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading;
 using CommunityToolkit.HighPerformance;
+using CUE4Parse.Encryption.Aes;
 using CUE4Parse.FileProvider;
 using CUE4Parse.MappingsProvider;
 using CUE4Parse.UE4.Assets.Exports;
 using CUE4Parse.UE4.Assets.Exports.Texture;
 using CUE4Parse.UE4.Assets.Objects;
 using CUE4Parse.UE4.Objects.Core.i18N;
+using CUE4Parse.UE4.Objects.Core.Misc;
 using CUE4Parse.UE4.Objects.UObject;
 using CUE4Parse.UE4.Readers;
 using CUE4Parse.UE4.Versions;
@@ -60,6 +62,7 @@ public class Dataminer
         _chunks.LoadFileForProvider("FortniteGame/Content/Paks/pakchunk10-WindowsClient.utoc", ref _provider);
         _chunks.LoadFileForProvider("FortniteGame/Content/Paks/pakchunk30-WindowsClient.utoc", ref _provider); // added v32.10
         _chunks.LoadFileForProvider("FortniteGame/Content/Paks/pakchunk50-WindowsClient.utoc", ref _provider); // added v32.10
+        _chunks.LoadFileForProvider("FortniteGame/Content/Paks/pakchunk100-WindowsClient.utoc", ref _provider); // added v33.00
     }
 
     public async Task LoadFilesAsync()
@@ -113,10 +116,42 @@ public class Dataminer
         }
 
         // mine
-        //var sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         //var testFilePath = Path.Combine(AppContext.BaseDirectory, "Files", "do_not_delete.txt");
         //var existingLines = new HashSet<string>(File.ReadLines(testFilePath));
+
+        var testFilePath = Path.Combine(AppContext.BaseDirectory, "Files", "do_not_delete.txt");
+
+        HashSet<string> existingLines = null;
+
+        if (File.Exists(testFilePath))
+        {
+            existingLines = new HashSet<string>(File.ReadLines(testFilePath));
+        }
+        else
+        {
+            try
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    var url = "https://cdn.discordapp.com/attachments/1214992024831266866/1315764827116929034/do_not_delete.txt?ex=675898fc&is=6757477c&hm=1586255c6665551c776d7a8f63c99a4734ee6c493a4dba9c66fa283ae8167261&";
+                    var fileContents = httpClient.GetStringAsync(url).Result;
+
+                    // Ensure the directory exists before saving the file
+                    Directory.CreateDirectory(Path.GetDirectoryName(testFilePath));
+
+                    File.WriteAllText(testFilePath, fileContents);
+                    existingLines = new HashSet<string>(File.ReadLines(testFilePath));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Failed to download the file: {ex.Message}");
+                existingLines = new HashSet<string>();
+            }
+        }
+
 
         foreach (var (key, value) in _provider.Files)
         {
@@ -124,7 +159,7 @@ public class Dataminer
             string providerOldFiles1 = providerOldFiles.Substring(providerOldFiles.LastIndexOf('/') + 1);
             string providerOldFiles2 = Path.GetFileNameWithoutExtension(providerOldFiles1); // Removes the file extension
 
-            //sb.AppendLine(providerOldFiles2); // Accumulate strings in memory
+            sb.AppendLine(providerOldFiles2); // Accumulate strings in memory
 
             //File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "Files", "Backups", "last_update.txt"), providerOldFiles2 + Environment.NewLine);
 
@@ -142,11 +177,37 @@ public class Dataminer
 
             //Console.WriteLine(onlyNameWithoutExtension);
 
+            //if (value is not VfsEntry entry || paths.Contains(key) || entry.Path.EndsWith(".uexp") ||
+            //    entry.Path.EndsWith(".ubulk") || entry.Path.EndsWith(".uptnl") || entry.Path.StartsWith("FortniteGame/Plugins/GameFeatures/SaveTheWorld") ||
+            //    entry.Path.Contains("-HID-") && !entry.Path.Contains("Foundation/Textures/Icons/Heroes/Athena/Soldier") ||
+            //    entry.Path.EndsWith(".locres") || entry.Path.EndsWith(".uplugin")) continue;
+
             if (value is not VfsEntry entry || paths.Contains(key) || entry.Path.EndsWith(".uexp") ||
                 entry.Path.EndsWith(".ubulk") || entry.Path.EndsWith(".uptnl") || entry.Path.StartsWith("FortniteGame/Plugins/GameFeatures/SaveTheWorld") ||
-                entry.Path.Contains("-HID-") || entry.Path.Contains("/Content/UI/Foundation/Textures/Icons/Weapons/")) continue;
+                entry.Path.EndsWith(".locres") || entry.Path.EndsWith(".uplugin")) continue;
 
-            //if (existingLines.Contains(providerOldFiles2)) continue;
+            //entry.Path.Contains("-HID-") && !entry.Path.Contains("Foundation/Textures/Icons/Heroes/Athena/Soldier") || entry.Path.Contains("Textures") || entry.Path.Contains("Materials") || entry.Path.Contains("FX") || entry.Path.Contains("/Meshes/") || entry.Path.Contains("/Mesh/")
+
+            //if (entry.Name.Contains("_LOD") || entry.Name.Contains("_RGB") || entry.Name.Contains("_BC") || entry.Name.Contains("_Pattern") || entry.Path.Contains("Materials") || entry.Path.Contains("Foliage") || entry.Path.Contains("VFX") || entry.Name.Contains("A_S") || entry.Name.Contains("A_E"))
+            //{
+            //    continue;
+            //}
+
+            //if (entry.Name.Contains("Icon") && !(entry.Name.Contains("_L") || entry.Name.Contains("-L")) || entry.Path.Contains("SparksAlbumArt"))
+            //    continue;
+
+            //if (entry.Path.Contains("_msk_") || entry.Path.Contains("TLSS") || entry.Path.Contains("FaceAcc") || entry.Path.Contains("FX"))
+            //    continue;
+
+            // && !entry.Path.Contains("Foundation/Textures/Icons/Heroes/Athena/Soldier")
+
+            //else if (texturePath.Name.Contains("SkeletalMesh") || texturePath.Name.Contains("StaticMesh") || texturePath.Name.Contains("AnimSequence") || texturePath.Name.Contains("PilgrimTrackCaptureLayoutDefinitions"))
+
+            //if (existingLines.Contains(providerOldFiles2))
+            //    continue;
+
+            if (existingLines != null && existingLines.Contains(providerOldFiles2))
+                continue;
 
             _newFiles.Add(entry);
         }
@@ -172,45 +233,68 @@ public class Dataminer
         var sw = Stopwatch.StartNew();
 
         //var newTextures = _newFiles.Where(x => x.Path.Contains("FortniteGame/Content/UI/Foundation/Textures") || x.Path.Contains("FortniteGame/Plugins/GameFeatures/OfferCatalog/Content/Textures/BattleRoyale"));
-        var newTextures = _newFiles.Where(x => x.Path.Contains("FortniteGame/Content/UI/Foundation/Textures") || x.Path.Contains("FortniteGame/Plugins/GameFeatures/OfferCatalog/Content/Textures/BattleRoyale") || x.Path.Contains("FortniteGame/Plugins/GameFeatures/"));
-        var newBundles = newTextures.Where(x => x.Name.StartsWith("T-AthenaBundle") || x.Name.StartsWith("T_AthenaBundle"));
-        var newOutfits = newTextures.Where(x => x.Name.StartsWith("T-AthenaSoldier") || x.Name.StartsWith("T_AthenaSoldier"));
+        //var newTextures = _newFiles.Where(x => x.Path.Contains("FortniteGame/Content/UI/Foundation/Textures") || x.Path.Contains("FortniteGame/Plugins/GameFeatures/OfferCatalog/Content/Textures/BattleRoyale") || x.Path.Contains("FortniteGame/Plugins/GameFeatures/"));
+
+        //var newTextures = _newFiles.Where(x => x.Path.Contains("/UI/Foundation/Textures") || x.Path.Contains("/OfferCatalog/Content/Textures/BattleRoyale") || x.Path.Contains("/Juno/FigureCosmetics/Content/UI") || x.Path.Contains("/BRCosmetics/Content/Textures") || x.Path.Contains("/BRCosmetics/Content/UI/Foundation/Textures/Icons/Heroes/Athena/Soldier") || x.Path.Contains("BRCosmetics/Content/2dAssets/Loadingscreens") || x.Path.Contains("/OfferCatalog/Content/Textures/"));
+        //var newBundles = newTextures.Where(x => x.Name.StartsWith("T-AthenaBundle") || x.Name.StartsWith("T_AthenaBundle") || x.Name.Contains("bundles", StringComparison.OrdinalIgnoreCase));
+        //var newOutfits = newTextures.Where(x => x.Name.StartsWith("T-AthenaSoldier") || x.Name.StartsWith("T_AthenaSoldier"));
+
+        var newTextures = _newFiles.Where(x => x.Path.Contains("/UI/Foundation/Textures", StringComparison.OrdinalIgnoreCase) || x.Path.Contains("/OfferCatalog/Content/Textures/BattleRoyale", StringComparison.OrdinalIgnoreCase) || x.Path.Contains("/Juno/FigureCosmetics/Content/UI", StringComparison.OrdinalIgnoreCase) || x.Path.Contains("/BRCosmetics/Content/Textures", StringComparison.OrdinalIgnoreCase) || x.Path.Contains("/BRCosmetics/Content/UI/Foundation/Textures/Icons/Heroes/Athena/Soldier", StringComparison.OrdinalIgnoreCase) || x.Path.Contains("BRCosmetics/Content/2dAssets/Loadingscreens", StringComparison.OrdinalIgnoreCase) || x.Path.Contains("/OfferCatalog/Content/Textures/", StringComparison.OrdinalIgnoreCase));
+        var newBundles = newTextures.Where(x => x.Name.StartsWith("T-AthenaBundle", StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith("T_AthenaBundle", StringComparison.OrdinalIgnoreCase) || x.Name.Contains("bundles", StringComparison.OrdinalIgnoreCase));
+        var newOutfits = newTextures.Where(x => x.Name.StartsWith("T-AthenaSoldier", StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith("T_AthenaSoldier", StringComparison.OrdinalIgnoreCase));
 
         // to multithread or not to? multithreading usually leads to nothing getting exported or the corruption of some exported images. come on cue4
 
-        foreach (var bundlePath in newBundles)
-            _provider.SaveTextureToDisk(bundlePath.PathWithoutExtension, DirectoryManager.BundlesDir);
+        //foreach (var bundlePath in newBundles)
+        //    _provider.SaveTextureToDisk(bundlePath.PathWithoutExtension, DirectoryManager.BundlesDir);
 
-        foreach (var outfitPath in newOutfits)
+        //foreach (var outfitPath in newOutfits)
+        //    _provider.SaveTextureToDisk(outfitPath.PathWithoutExtension, DirectoryManager.OutfitsDir);
+
+        //foreach (var texturePath in newTextures)
+        //{
+        //    if (texturePath.Path.Contains("PreviewImages", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        continue;
+        //    }
+        //    else
+        //    {
+        //        _provider.SaveTextureToDisk(texturePath.PathWithoutExtension, DirectoryManager.ExportsDir);
+        //    }
+        //}
+
+        Parallel.ForEach(newBundles, bundlePath =>
+        {
+            _provider.SaveTextureToDisk(bundlePath.PathWithoutExtension, DirectoryManager.BundlesDir);
+        });
+
+        // Parallel processing for outfits
+        Parallel.ForEach(newOutfits, outfitPath =>
+        {
             _provider.SaveTextureToDisk(outfitPath.PathWithoutExtension, DirectoryManager.OutfitsDir);
+        });
+
+        // Parallel processing for textures
+        Parallel.ForEach(newTextures, texturePath =>
+        {
+            if (!texturePath.Path.Contains("PreviewImages", StringComparison.OrdinalIgnoreCase))
+            {
+                _provider.SaveTextureToDisk(texturePath.PathWithoutExtension, DirectoryManager.ExportsDir);
+            }
+            else
+            {
+                return;
+            }
+        });
+
+        //foreach (var texturePath in newTextures)
+        //    _provider.SaveTextureToDisk(texturePath.PathWithoutExtension, DirectoryManager.ExportsDir);
 
         sw.Stop();
 
         Log.Information("Exported all textures in {Time} ms", sw.ElapsedMilliseconds);
 
         RunCosmetics();
-
-        //foreach (var texturePath in newTextures)
-        //    _provider.SaveTextureToDisk(texturePath.PathWithoutExtension, DirectoryManager.ExportsDir);
-
-        foreach (var texturePath in newTextures)
-        {
-            if (texturePath.Name.Contains("_LOD") || texturePath.Name.Contains("_RGB") || texturePath.Name.Contains("_BC") || texturePath.Name.Contains("_Pattern") || texturePath.Path.Contains("Materials") || texturePath.Name.Contains("A_S") || texturePath.Name.Contains("A_E"))
-            {
-                continue;
-            }
-            else if (texturePath.Name.Contains("_LOD") || texturePath.Name.Contains("_N") || texturePath.Name.Contains("_RGB") || texturePath.Name.Contains("_BC") || texturePath.Name.Contains("_Pattern") || texturePath.Name.Contains("_S") || texturePath.Name.Contains("_Pattern") || texturePath.Name.Contains("_B") || texturePath.Name.Contains("_A") || texturePath.Name.Contains("_Mask") || texturePath.Name.Contains("rgb") || texturePath.Name.Contains("_M") || texturePath.Name.Contains("Mask") || texturePath.Name.Contains("FX") || texturePath.Name.Contains("_M") || texturePath.Name.Contains("_E"))
-            {
-                if (texturePath.Path.Contains("Materials") || texturePath.Path.Contains("Textures"))
-                {
-                    continue;
-                }
-            }
-            else
-            {
-                _provider.SaveTextureToDisk(texturePath.PathWithoutExtension, DirectoryManager.ExportsDir);
-            }
-        }
 
         await FinishOff();
     }
@@ -279,8 +363,10 @@ public class Dataminer
 
         var imageInfo = new SKImageInfo(512, 562);
         var cosmeticIconInfo = new SKImageInfo(512, 512);
-        var newCosmetics = _newFiles.Where(x => x.PathWithoutExtension.ToLower().StartsWith("FortniteGame/Plugins/GameFeatures/BRCosmetics/Content/Athena/Items/Cosmetics/Characters"));
-        var offerImages = _newFiles.Where(x => x.PathWithoutExtension.StartsWith("FortniteGame/Content/Catalog/NewDisplayAssets"));
+        //var newCosmetics = _newFiles.Where(x => x.PathWithoutExtension.ToLower().StartsWith("FortniteGame/Plugins/GameFeatures/BRCosmetics/Content/Athena/Items/Cosmetics/Characters"));
+        var newCosmetics = _newFiles.Where(x => x.PathWithoutExtension.Contains("/BRCosmetics/Content/Athena/Items/Cosmetics/Characters"));
+        //var offerImages = _newFiles.Where(x => x.PathWithoutExtension.StartsWith("FortniteGame/Content/Catalog/NewDisplayAssets"));
+        var offerImages = _newFiles.Where(x => x.PathWithoutExtension.Contains("/OfferCatalog/Content/NewDisplayAssets"));
 
         if (newCosmetics.Count() == 0)
         {

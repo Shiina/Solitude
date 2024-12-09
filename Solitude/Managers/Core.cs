@@ -22,6 +22,7 @@ public static class Core
             new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .WriteTo.Console(theme: AnsiConsoleTheme.Literate)
+            .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
             .CreateLogger();
         
         await OodleInit();

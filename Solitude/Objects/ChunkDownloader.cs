@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text.RegularExpressions;
+using System.Threading;
 using CUE4Parse.Compression;
 using CUE4Parse.FileProvider;
 using CUE4Parse.UE4.Readers;
@@ -19,8 +20,7 @@ public class ChunkDownloader
     // https://github.com/4sval/FModel/blob/c014478abc4e455c7116504be92aa00eb00d757b/FModel/ViewModels/CUE4ParseViewModel.cs#L53
     private static readonly Regex PakFinder = new(@"^FortniteGame(/|\\)Content(/|\\)Paks(/|\\)",
         RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    
-    
+
     private void LoadFileForProvider(FFileManifest file, ref StreamedFileProvider provider)
     {
         if (Manifest is null)
@@ -31,31 +31,27 @@ public class ChunkDownloader
 
         var sw = Stopwatch.StartNew();
 
-        var versions = provider.Versions;
-        var _provider = provider;
-
-        Parallel.ForEach(Manifest.Files, file =>
+        if (file.FileName.EndsWith(".utoc"))
         {
-            if (file.FileName.EndsWith(".utoc"))
-            {
-                _provider.RegisterVfs(
-                    file.FileName, [(RandomAccessStream)file.GetStream()],
-                    it => new FRandomAccessStreamArchive(it, Manifest.Files.First(x => x.FileName.Equals(it)).GetStream(), versions));
-            }
-            else if (file.FileName.EndsWith(".ucas"))
-            {
-                return;
-            }
-            else if (file.FileName.EndsWith(".sig"))
-            {
-                return;
-            }
-            else
-            {
-                using var pakStream = file.GetStream();
-                _provider.RegisterVfs(file.FileName, [pakStream], null);
-            }
-        });
+            var versions = provider.Versions;
+
+            // https://github.com/4sval/FModel/blob/c014478abc4e455c7116504be92aa00eb00d757b/FModel/ViewModels/CUE4ParseViewModel.cs#L196
+            provider.RegisterVfs(file.FileName, [file.GetStream()],
+                it => new FRandomAccessStreamArchive(it, Manifest.Files.First(x => x.FileName.Equals(it)).GetStream(), versions));
+        }
+        else if (file.FileName.EndsWith(".ucas"))
+        {
+            return;
+        }
+        else if (file.FileName.EndsWith(".sig"))
+        {
+            return;
+        }
+        else
+        {
+            using var pakStream = file.GetStream();
+            provider.RegisterVfs(file.FileName, [pakStream], null);
+        }
 
         var ms = sw.ElapsedMilliseconds;
 
@@ -80,13 +76,17 @@ public class ChunkDownloader
         if (Manifest is null)
             return;
 
-        foreach (var file in Manifest.Files)
+        var _provider = provider;
+
+        Parallel.ForEach(Manifest.Files, file =>
         {
             if (!PakFinder.IsMatch(file.FileName) || file.FileName.Contains("optional"))
-                continue;
+                return;
 
-            LoadFileForProvider(file, ref provider);
-        }
+            _provider.RegisterVfs(
+                file.FileName, [(RandomAccessStream)file.GetStream()],
+                it => new FRandomAccessStreamArchive(it, Manifest.Files.First(x => x.FileName.Equals(it)).GetStream(), _provider.Versions));
+        });
 
         provider.Mount();
     }
